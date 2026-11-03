@@ -1,3 +1,7 @@
+'''
+Basic ErrP Game where you try to reach a red target by maneuvering a gray cursor.
+'''
+
 from psychopy import visual, core, event
 import numpy as np
 import time

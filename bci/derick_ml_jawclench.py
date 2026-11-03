@@ -1,3 +1,6 @@
+'''
+    Goated jaw clench classifier. This one is used for the live demo.
+'''
 from __future__ import annotations
 
 import logging
@@ -10,7 +13,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from bci.mental_command_worker import canonicalize_channel_name
+from mental_command_worker import canonicalize_channel_name
 
 
 REST_CLASS_CODE = 0

@@ -1,6 +1,9 @@
+'''
+    Config file for orchestrator. Use this to configure the tasks that the orchestartor will run
+'''
 from __future__ import annotations
 
-from bci.config import BCIOrchestratorConfig, OrchestratedTaskSpec, SharedBCIConfig
+from config import BCIOrchestratorConfig, OrchestratedTaskSpec, SharedBCIConfig
 
 
 DEFAULT_BCI_ORCHESTRATOR_CONFIG = BCIOrchestratorConfig(

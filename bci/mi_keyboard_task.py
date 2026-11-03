@@ -1,3 +1,6 @@
+'''
+    keyboard controlled through motor imagery
+'''
 from __future__ import annotations
 
 import argparse
@@ -10,7 +13,7 @@ import numpy as np
 from mne_lsl.stream import StreamLSL
 from psychopy import core, event, visual
 
-from bci.config import (
+from config import (
     EEGConfig,
     LSLConfig,
     MentalCommandLabelConfig,
@@ -18,12 +21,12 @@ from bci.config import (
     MICursorTaskConfig,
     StimConfig,
 )
-from bci.bci_runtime import (
+from bci_runtime import (
     apply_runtime_config_overrides,
     resolve_runtime_face_classifier,
     resolve_shared_mi_model,
 )
-from bci.derick_ml_jawclench import (
+from derick_ml_jawclench import (
     collect_cue_locked_stream_block,
     JAW_CLENCH_CLASS_CODE,
     RAPID_BLINK_CLASS_CODE,
@@ -32,7 +35,7 @@ from bci.derick_ml_jawclench import (
     select_jaw_channel_indices,
     update_live_face_event_state,
 )
-from bci.mental_command_worker import (
+from mental_command_worker import (
     StreamingIIRFilter,
     canonicalize_channel_name,
     resolve_channel_order,

@@ -17,8 +17,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.covariance import oas
 
-from bci.mental_command_worker import FilterBankTangentSpace
-from bci.config import EEGConfig, ModelConfig
+from mental_command_worker import FilterBankTangentSpace
+from config import EEGConfig, ModelConfig
 
 
 # ----------------------------------------------------------------

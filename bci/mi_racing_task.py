@@ -1,3 +1,6 @@
+'''
+    motor imagery subway surfers
+'''
 from __future__ import annotations
 
 import logging
@@ -10,8 +13,8 @@ import numpy as np
 from mne_lsl.stream import StreamLSL
 from psychopy import core, event, visual
 
-from bci.bci_runtime import apply_runtime_config_overrides, resolve_shared_mi_model
-from bci.config import (
+from bci_runtime import apply_runtime_config_overrides, resolve_shared_mi_model
+from config import (
     EEGConfig,
     LSLConfig,
     MIRacingTaskConfig,
@@ -19,7 +22,7 @@ from bci.config import (
     MentalCommandModelConfig,
     StimConfig,
 )
-from bci.mental_command_worker import StreamingIIRFilter, resolve_channel_order
+from mental_command_worker import StreamingIIRFilter, resolve_channel_order
 
 
 @dataclass

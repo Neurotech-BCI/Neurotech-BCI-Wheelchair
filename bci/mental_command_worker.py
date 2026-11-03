@@ -1,3 +1,6 @@
+'''
+    Theory for the mental command task
+'''
 from __future__ import annotations
 
 import hashlib
@@ -18,7 +21,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from bci.config import EEGConfig, MentalCommandModelConfig, MentalCommandTaskConfig, StimConfig, LiveMITaskConfig
+from config import EEGConfig, MentalCommandModelConfig, MentalCommandTaskConfig, StimConfig, LiveMITaskConfig
 
 
 # ---------------------------------------------------------------------------

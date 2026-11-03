@@ -1,3 +1,6 @@
+'''
+    To-Do: Add description
+'''
 from __future__ import annotations
 
 import argparse
@@ -12,15 +15,15 @@ from psychopy import core, event, visual
 
 from mne_lsl.stream import StreamLSL
 
-from bci.config import EEGConfig, LSLConfig, MentalCommandLabelConfig, MentalCommandModelConfig, MICursorTaskConfig, StimConfig
-from bci.bci_runtime import apply_runtime_config_overrides, resolve_runtime_jaw_classifier, resolve_shared_mi_model
-from bci.derick_ml_jawclench import (
+from config import EEGConfig, LSLConfig, MentalCommandLabelConfig, MentalCommandModelConfig, MICursorTaskConfig, StimConfig
+from bci_runtime import apply_runtime_config_overrides, resolve_runtime_jaw_classifier, resolve_shared_mi_model
+from derick_ml_jawclench import (
     collect_cue_locked_stream_block,
     run_visual_jaw_calibration,
     select_jaw_channel_indices,
     update_live_jaw_clench_state,
 )
-from bci.mental_command_worker import (
+from mental_command_worker import (
     StreamingIIRFilter,
     canonicalize_channel_name,
     resolve_channel_order,

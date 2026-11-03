@@ -1,3 +1,7 @@
+'''
+    Use this for the live demo. Trains classifier on offline data, runs calibration, and all the tasks specified in orchestrator_config.py
+'''
+
 from __future__ import annotations
 
 import argparse
@@ -10,8 +14,8 @@ import numpy as np
 from mne_lsl.stream import StreamLSL
 from psychopy import core, event, visual
 
-from bci.bci_runtime import BCIOrchestratorRuntime, FaceCalibrationDataset, TaskSequenceItem, set_active_runtime
-from bci.config import (
+from bci_runtime import BCIOrchestratorRuntime, FaceCalibrationDataset, TaskSequenceItem, set_active_runtime
+from config import (
     BCIOrchestratorConfig,
     EEGConfig,
     HingeTaskConfig,
@@ -20,13 +24,13 @@ from bci.config import (
     MICursorTaskConfig,
     StimConfig,
 )
-from bci.derick_ml_jawclench import (
+from derick_ml_jawclench import (
     collect_cue_locked_stream_block,
     collect_visual_face_event_feature_rows,
     select_jaw_channel_indices,
 )
-from bci.mental_command_worker import canonicalize_channel_name, resolve_channel_order, train_or_load_shared_mi_model
-from bci.orchestrator_config import DEFAULT_BCI_ORCHESTRATOR_CONFIG
+from mental_command_worker import canonicalize_channel_name, resolve_channel_order, train_or_load_shared_mi_model
+from orchestrator_config import DEFAULT_BCI_ORCHESTRATOR_CONFIG
 
 
 TASK_MODULES = {

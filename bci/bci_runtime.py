@@ -1,3 +1,6 @@
+'''
+    BCI helper file
+'''
 from __future__ import annotations
 
 from dataclasses import dataclass, field, is_dataclass, replace
@@ -6,14 +9,14 @@ from typing import Any
 import numpy as np
 from sklearn.pipeline import Pipeline
 
-from bci.derick_ml_jawclench import (
+from derick_ml_jawclench import (
     JAW_CLENCH_CLASS_CODE,
     RAPID_BLINK_CLASS_CODE,
     REST_CLASS_CODE,
     train_face_event_classifier,
     train_jaw_clench_classifier,
 )
-from bci.mental_command_worker import SharedMIModelResult, canonicalize_channel_name, train_or_load_shared_mi_model
+from mental_command_worker import SharedMIModelResult, canonicalize_channel_name, train_or_load_shared_mi_model
 
 
 @dataclass

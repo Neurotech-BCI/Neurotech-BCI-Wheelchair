@@ -1,4 +1,6 @@
-# config.py
+'''
+    Config file for all live experiments
+'''
 from __future__ import annotations
 
 from dataclasses import dataclass, field
