@@ -3,6 +3,8 @@
 This script mirrors the calibration phase from bci/psychopy_task.py but removes
 all live EEG/LSL processing. It only presents stimuli and sends LEFT/RIGHT
 trigger pulses to the trigger hub.
+
+Update (11/03): Added both hands and resting state trials.
 """
 from __future__ import annotations
 
@@ -26,6 +28,8 @@ from psychopy import core, event, visual
 class StimConfig:
     left_code: int = 1
     right_code: int = 2
+    rest_code: int = 3
+    both_hands_code: int = 4
 
 
 @dataclass(frozen=True)
@@ -86,19 +90,23 @@ class TriggerPort:
 class BalancedBlockScheduler:
     """Generate approximately balanced LEFT/RIGHT codes in shuffled blocks."""
 
-    def __init__(self, block_size: int, left_code: int, right_code: int, seed: int | None = None):
+    def __init__(self, block_size: int, left_code: int, right_code: int, rest_code: int, both_hands_code: int, seed: int | None = None):
         if block_size < 2:
             raise ValueError("block_size must be >= 2")
         self.block_size = int(block_size)
         self.left_code = int(left_code)
         self.right_code = int(right_code)
+        self.rest_code = int(rest_code)
+        self.both_hands_code = int(both_hands_code)
         self.rng = random.Random(seed)
         self._bag: list[int] = []
 
     def _refill(self) -> None:
-        n_left = self.block_size // 2
-        n_right = self.block_size - n_left
-        self._bag = [self.left_code] * n_left + [self.right_code] * n_right
+        n_left = self.block_size // 4
+        n_right = (self.block_size - n_left) // 3
+        n_rest = (self.block_size - n_left - n_right) // 2
+        n_both_hands = self.block_size - n_left - n_right - n_rest
+        self._bag = [self.left_code] * n_left + [self.right_code] * n_right + [self.rest_code] * n_rest + [self.both_hands_code] * n_both_hands
         self.rng.shuffle(self._bag)
 
     def next_code(self) -> int:
@@ -134,15 +142,24 @@ _ARROW_VERTS_RIGHT = [
     (0.05, -0.10), (0.05, -0.04), (-0.25, -0.04),
 ]
 _ARROW_VERTS_LEFT = [(-x, y) for x, y in _ARROW_VERTS_RIGHT]
+_ARROW_VERTS_UP = [(y, x) for x, y in _ARROW_VERTS_LEFT]
 
 
 def run_task(session_name: str, port: str, task_cfg: TaskConfig, stim_cfg: StimConfig, ser_cfg: SerialConfig) -> None:
     left = int(stim_cfg.left_code)
     right = int(stim_cfg.right_code)
+    rest = int(stim_cfg.rest_code)
+    both_hands = int(stim_cfg.both_hands_code)
 
     def code_to_name(code: int) -> str:
-        return "LEFT" if int(code) == left else "RIGHT"
-
+        if int(code) == left:
+            return "LEFT"
+        if int(code) == right:
+            return "RIGHT"
+        if int(code) == rest:
+            return "REST"
+        return "BOTH_HANDS"
+        
     trig = TriggerPort(port=port, baudrate=ser_cfg.baudrate, pulse_width_s=ser_cfg.pulse_width_s)
     trig.open()
 
@@ -198,6 +215,8 @@ def run_task(session_name: str, port: str, task_cfg: TaskConfig, stim_cfg: StimC
         block_size=max(2, task_cfg.max_trials_before_break),
         left_code=left,
         right_code=right,
+        rest_code=rest,
+        both_hands_code=both_hands
     )
 
     print(f"[SESSION] {session_name}")
@@ -207,7 +226,7 @@ def run_task(session_name: str, port: str, task_cfg: TaskConfig, stim_cfg: StimC
         cue_text.text = (
             "Offline Motor Imagery Calibration\n\n"
             "Fixate on the center cross.\n"
-            "An arrow will cue LEFT or RIGHT preparation.\n"
+            "An arrow will cue LEFT, RIGHT, REST, or BOTH HANDS preparation.\n"
             "Then execute the cued motor imagery when prompted.\n\n"
             "Press SPACE to begin. ESC to quit."
         )
@@ -228,8 +247,18 @@ def run_task(session_name: str, port: str, task_cfg: TaskConfig, stim_cfg: StimC
             # Prepare phase
             cue_text.text = "Prepare"
             status_text.text = f"Get ready: {code_to_name(y_true)}"
-            prep_arrow.vertices = _ARROW_VERTS_LEFT if y_true == left else _ARROW_VERTS_RIGHT
-            prep_arrow.opacity = 1
+            if y_true == left:
+                prep_arrow.vertices = _ARROW_VERTS_LEFT
+                prep_arrow.opacity = 1
+            elif y_true == right:
+                prep_arrow.vertices = _ARROW_VERTS_RIGHT
+                prep_arrow.opacity = 1
+            elif y_true == rest:
+                prep_arrow.opacity = 0
+            else:
+                prep_arrow.vertices = _ARROW_VERTS_UP
+                prep_arrow.opacity = 1
+
             wait_with_display(task_cfg.prep_duration_s)
 
             # Execute phase: show cue then pulse trigger
