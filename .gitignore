@@ -1,2 +1,3 @@
 .vscode/
 *.log
+bci/__pycache__/*
