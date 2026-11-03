@@ -3,6 +3,16 @@
 '''
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+# Make the bci/ imports work no matter how this file is launched
+# (python bci/<file>.py, python -m bci.<file>, IDE run button, any working directory).
+_BCI_DIR = Path(__file__).resolve().parent
+for _p in (str(_BCI_DIR.parent), str(_BCI_DIR)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
 import argparse
 import logging
 import math
@@ -14,6 +24,8 @@ import numpy as np
 from psychopy import core, event, visual
 
 from mne_lsl.stream import StreamLSL
+
+from lsl_utils import connect_eeg_stream
 
 from config import EEGConfig, LSLConfig, MentalCommandLabelConfig, MentalCommandModelConfig, MICursorTaskConfig, StimConfig
 from bci_runtime import apply_runtime_config_overrides, resolve_runtime_jaw_classifier, resolve_shared_mi_model
@@ -142,13 +154,7 @@ def run_task(fname: str, debug_mode: bool = False, max_trials: int | None = None
     sfreq = 300.0
 
     if not debug_mode:
-        stream = StreamLSL(
-            bufsize=60.0,
-            name=lsl_cfg.name,
-            stype=lsl_cfg.stype,
-            source_id=lsl_cfg.source_id,
-        )
-        stream.connect(acquisition_delay=0.001, processing_flags="all")
+        stream = connect_eeg_stream(lsl_cfg, bufsize=60.0)
         logger.info("Connected to LSL stream: info=%s", stream.info)
 
         available = list(stream.info["ch_names"])

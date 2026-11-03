@@ -4,6 +4,16 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+# Make the bci/ imports work no matter how this file is launched
+# (python bci/<file>.py, python -m bci.<file>, IDE run button, any working directory).
+_BCI_DIR = Path(__file__).resolve().parent
+for _p in (str(_BCI_DIR.parent), str(_BCI_DIR)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
 import argparse
 import importlib
 import inspect
@@ -12,6 +22,8 @@ from datetime import datetime
 
 import numpy as np
 from mne_lsl.stream import StreamLSL
+
+from lsl_utils import connect_eeg_stream
 from psychopy import core, event, visual
 
 from bci_runtime import BCIOrchestratorRuntime, FaceCalibrationDataset, TaskSequenceItem, set_active_runtime
@@ -121,13 +133,7 @@ def _prepare_stream_signature(
     lsl_cfg = base_cfgs["lsl_cfg"]
     eeg_cfg = base_cfgs["eeg_cfg"]
 
-    stream = StreamLSL(
-        bufsize=60.0,
-        name=lsl_cfg.name,
-        stype=lsl_cfg.stype,
-        source_id=lsl_cfg.source_id,
-    )
-    stream.connect(acquisition_delay=0.001, processing_flags="all")
+    stream = connect_eeg_stream(lsl_cfg, bufsize=60.0)
     available = list(stream.info["ch_names"])
     model_ch_names, missing = resolve_channel_order(available, eeg_cfg.picks)
     if missing:
