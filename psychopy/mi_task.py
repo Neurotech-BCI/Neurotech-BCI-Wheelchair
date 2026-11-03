@@ -34,7 +34,7 @@ class StimConfig:
 
 @dataclass(frozen=True)
 class TaskConfig:
-    n_calibration_trials: int = 50
+    n_calibration_trials: int = 80
     max_trials_before_break: int = 20
 
     prep_duration_s: float = 3.0
@@ -142,7 +142,7 @@ _ARROW_VERTS_RIGHT = [
     (0.05, -0.10), (0.05, -0.04), (-0.25, -0.04),
 ]
 _ARROW_VERTS_LEFT = [(-x, y) for x, y in _ARROW_VERTS_RIGHT]
-_ARROW_VERTS_UP = [(y, x) for x, y in _ARROW_VERTS_LEFT]
+_ARROW_VERTS_UP = [(-y, x) for x, y in _ARROW_VERTS_LEFT]
 
 
 def run_task(session_name: str, port: str, task_cfg: TaskConfig, stim_cfg: StimConfig, ser_cfg: SerialConfig) -> None:
@@ -158,7 +158,7 @@ def run_task(session_name: str, port: str, task_cfg: TaskConfig, stim_cfg: StimC
             return "RIGHT"
         if int(code) == rest:
             return "REST"
-        return "BOTH_HANDS"
+        return "BOTH HANDS"
         
     trig = TriggerPort(port=port, baudrate=ser_cfg.baudrate, pulse_width_s=ser_cfg.pulse_width_s)
     trig.open()
