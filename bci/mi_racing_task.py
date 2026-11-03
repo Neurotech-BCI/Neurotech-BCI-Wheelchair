@@ -10,8 +10,8 @@ import numpy as np
 from mne_lsl.stream import StreamLSL
 from psychopy import core, event, visual
 
-from bci_runtime import apply_runtime_config_overrides, resolve_shared_mi_model
-from config import (
+from bci.bci_runtime import apply_runtime_config_overrides, resolve_shared_mi_model
+from bci.config import (
     EEGConfig,
     LSLConfig,
     MIRacingTaskConfig,
@@ -19,7 +19,7 @@ from config import (
     MentalCommandModelConfig,
     StimConfig,
 )
-from mental_command_worker import StreamingIIRFilter, resolve_channel_order
+from bci.mental_command_worker import StreamingIIRFilter, resolve_channel_order
 
 
 @dataclass

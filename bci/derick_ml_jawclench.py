@@ -10,7 +10,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from mental_command_worker import canonicalize_channel_name
+from bci.mental_command_worker import canonicalize_channel_name
 
 
 REST_CLASS_CODE = 0

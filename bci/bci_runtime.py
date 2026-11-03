@@ -6,14 +6,14 @@ from typing import Any
 import numpy as np
 from sklearn.pipeline import Pipeline
 
-from derick_ml_jawclench import (
+from bci.derick_ml_jawclench import (
     JAW_CLENCH_CLASS_CODE,
     RAPID_BLINK_CLASS_CODE,
     REST_CLASS_CODE,
     train_face_event_classifier,
     train_jaw_clench_classifier,
 )
-from mental_command_worker import SharedMIModelResult, canonicalize_channel_name, train_or_load_shared_mi_model
+from bci.mental_command_worker import SharedMIModelResult, canonicalize_channel_name, train_or_load_shared_mi_model
 
 
 @dataclass

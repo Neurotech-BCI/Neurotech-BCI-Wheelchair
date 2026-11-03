@@ -14,20 +14,20 @@ from mne_lsl.stream import StreamLSL
 from PIL import Image, ImageOps
 from psychopy import core, event, visual
 
-from bci_runtime import (
+from bci.bci_runtime import (
     apply_runtime_config_overrides,
     resolve_runtime_jaw_classifier,
     resolve_shared_epoch_mi_model,
 )
-from config import EEGConfig, HingeTaskConfig, LSLConfig, MentalCommandModelConfig, StimConfig
-from derick_ml_jawclench import (
+from bci.config import EEGConfig, HingeTaskConfig, LSLConfig, MentalCommandModelConfig, StimConfig
+from bci.derick_ml_jawclench import (
     collect_cue_locked_stream_block,
     run_visual_jaw_calibration,
     select_jaw_channel_indices,
     update_live_jaw_clench_state,
 )
-from mental_command_worker import canonicalize_channel_name, filter_session, resolve_channel_order
-from mi_keyboard_task import run_task as run_keyboard_task
+from bci.mental_command_worker import canonicalize_channel_name, filter_session, resolve_channel_order
+from bci.mi_keyboard_task import run_task as run_keyboard_task
 
 
 @dataclass(frozen=True)

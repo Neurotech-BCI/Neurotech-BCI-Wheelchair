@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from config import BCIOrchestratorConfig, OrchestratedTaskSpec, SharedBCIConfig
+from bci.config import BCIOrchestratorConfig, OrchestratedTaskSpec, SharedBCIConfig
 
 
 DEFAULT_BCI_ORCHESTRATOR_CONFIG = BCIOrchestratorConfig(

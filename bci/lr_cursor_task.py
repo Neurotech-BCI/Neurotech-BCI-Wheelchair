@@ -11,7 +11,7 @@ from psychopy import core, event, visual
 
 from mne_lsl.stream import StreamLSL
 
-from config import (
+from bci.config import (
     EEGConfig,
     LSLConfig,
     MentalCommandLabelConfig,
@@ -19,8 +19,8 @@ from config import (
     MICursorTaskConfig,
     StimConfig,
 )
-from bci_runtime import apply_runtime_config_overrides, resolve_shared_mi_model
-from mental_command_worker import (
+from bci.bci_runtime import apply_runtime_config_overrides, resolve_shared_mi_model
+from bci.mental_command_worker import (
     StreamingIIRFilter,
     canonicalize_channel_name,
     resolve_channel_order,

@@ -18,7 +18,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from config import EEGConfig, MentalCommandModelConfig, MentalCommandTaskConfig, StimConfig, LiveMITaskConfig
+from bci.config import EEGConfig, MentalCommandModelConfig, MentalCommandTaskConfig, StimConfig, LiveMITaskConfig
 
 
 # ---------------------------------------------------------------------------
