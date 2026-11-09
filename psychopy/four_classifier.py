@@ -11,7 +11,7 @@ reads the live EEG stream and shows what the decoder sees:
 
 Two detectors (LEFT vs REST and RIGHT vs REST) train during the session from
 the 1 to 3 s part of each execute period and retrain every few trials. Pass
---model to start from a saved model and give feedback from the first trial.
+the model to start from a saved model and give feedback from the first trial.
 
 Uses the live decoding code in ../bci (dual_arrow_task.py,
 dual_mi_classifier.py, lsl_utils.py, config.py).
