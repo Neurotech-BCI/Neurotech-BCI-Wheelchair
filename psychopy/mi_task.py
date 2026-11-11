@@ -142,7 +142,7 @@ _ARROW_VERTS_RIGHT = [
     (0.05, -0.10), (0.05, -0.04), (-0.25, -0.04),
 ]
 _ARROW_VERTS_LEFT = [(-x, y) for x, y in _ARROW_VERTS_RIGHT]
-_ARROW_VERTS_UP = [(-y, x) for x, y in _ARROW_VERTS_LEFT]
+_ARROW_VERTS_UP = [(y + 0.05, x) for x, y in _ARROW_VERTS_LEFT]
 
 
 def run_task(session_name: str, port: str, task_cfg: TaskConfig, stim_cfg: StimConfig, ser_cfg: SerialConfig) -> None:
