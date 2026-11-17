@@ -61,14 +61,39 @@ def connect_eeg_stream(
     stype = getattr(lsl_cfg, "stype", None)
     source_id = getattr(lsl_cfg, "source_id", None)
 
-    streams = _resolve_all(resolve_timeout_s, attempts)
+    use_tcp = getattr(lsl_cfg, "dsi_tcp_fallback", True)
+    # With the DSI-Streamer fallback on, look once before trying it, so a task
+    # started with only DSI-Streamer open does not wait through every retry.
+    streams = _resolve_all(resolve_timeout_s, 1 if use_tcp else attempts)
     visible = "\n".join(f"  - {_describe(s)}" for s in streams) or "  (none)"
+
+    if not streams and use_tcp:
+        # No LSL stream: read DSI-Streamer's TCP/IP output directly instead
+        # (DSI-Streamer stays open and keeps recording). See dsi_tcp_bridge.py.
+        try:
+            from dsi_tcp_bridge import start_background_bridge
+        except ImportError:
+            from bci.dsi_tcp_bridge import start_background_bridge
+        host = getattr(lsl_cfg, "dsi_tcp_host", "127.0.0.1")
+        port = getattr(lsl_cfg, "dsi_tcp_port", 8844)
+        try:
+            start_background_bridge(lsl_cfg, logger=log)
+            streams = _resolve_all(resolve_timeout_s, attempts)
+            visible = "\n".join(f"  - {_describe(s)}" for s in streams) or "  (none)"
+        except (ConnectionError, OSError) as exc:
+            log.info("No DSI-Streamer TCP/IP output on %s:%s (%s); looking for LSL again.", host, port, exc)
+            if attempts > 1:
+                streams = _resolve_all(resolve_timeout_s, attempts - 1)
+                visible = "\n".join(f"  - {_describe(s)}" for s in streams) or "  (none)"
+        except TimeoutError as exc:
+            raise RuntimeError(str(exc)) from exc
 
     if not streams:
         raise RuntimeError(
-            "No LSL streams are visible from this computer.\n"
-            "Check that the EEG streamer (e.g. DSI-Streamer) is running with LSL output on, and that this "
-            "computer is on the same network as the streamer with Python allowed through the firewall."
+            "No EEG stream found.\n"
+            "Either: in DSI-Streamer, open the TCP IP tab, check 'Activate TCP/IP Socket' and press Start "
+            "(DSI-Streamer can keep recording), or run an LSL streamer such as dsi2lslGUI.\n"
+            "Also check that Python is allowed through the firewall."
         )
 
     candidates = [s for s in streams if _matches(s, name, stype, source_id)]

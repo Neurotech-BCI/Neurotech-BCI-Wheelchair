@@ -367,7 +367,8 @@ def run_task(fname: str, max_trials: int | None = None) -> None:  # noqa: C901
     view = ArrowView(win)
     view.title.text = "Left / Right / Both arrows"
     decoder = LiveDecoder(stream, len(ch_names), sfreq, eeg_cfg, task_cfg)
-    clf = DualMIClassifier(C=task_cfg.logreg_C, include_other_side_as_negative=task_cfg.include_other_side_as_negative)
+    clf = DualMIClassifier(C=task_cfg.logreg_C, include_other_side_as_negative=task_cfg.include_other_side_as_negative,
+                           design=task_cfg.decoder_design or None)
     session_t0 = local_clock()
 
     stream_fh = open(f"{fname}_dual_arrow_stream.csv", "w", newline="")
@@ -445,7 +446,8 @@ def run_task(fname: str, max_trials: int | None = None) -> None:  # noqa: C901
             view.draw()
             offline = load_offline_dual_dataset(task_cfg, eeg_cfg, stim_cfg, sfreq, ch_names, logger)
             if len(offline):
-                offline_scores = DualMIClassifier(task_cfg.logreg_C, task_cfg.include_other_side_as_negative).evaluate(offline)
+                offline_scores = DualMIClassifier(task_cfg.logreg_C, task_cfg.include_other_side_as_negative,
+                                                  design=task_cfg.decoder_design or None).evaluate(offline)
                 logger.info("Offline-only CV: left %s | right %s", offline_scores["left"].text(), offline_scores["right"].text())
                 dataset = offline
                 has_offline = DualMIClassifier.can_fit(dataset)

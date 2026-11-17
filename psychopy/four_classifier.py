@@ -9,9 +9,17 @@ reads the live EEG stream and shows what the decoder sees:
     forward arrow  fills when both sides are active (BOTH HANDS)
     rest circle    fills when neither side is active
 
-Two detectors (LEFT vs REST and RIGHT vs REST) train during the session from
-the 1 to 3 s part of each execute period and retrain every few trials. Pass
-the model to start from a saved model and give feedback from the first trial.
+The decoder trains during the session from the 1 to 3 s part of each execute
+period and retrains every few trials. Choose its design with --design
+(side_specific by default, activity_side works best for Andy; see
+bci/dual_mi_classifier.py).
+
+Start from earlier data with --model: either a model made by
+bci/build_start_model.py or the _model.pkl a previous session saved. The
+matching _windows.npz next to it is loaded too and kept in every retrain, so
+feedback starts on trial 1 and the model never relies on this session alone.
+Each session saves its model and ALL its training windows (earlier + new), so
+the next session can continue from it.
 Uses the live decoding code in ../bci (dual_arrow_task.py,
 dual_mi_classifier.py, lsl_utils.py, config.py).
 """
@@ -43,9 +51,9 @@ from mne_lsl.lsl import local_clock  # noqa: E402
 
 from config import DualArrowTaskConfig, EEGConfig, LSLConfig  # noqa: E402
 from dual_arrow_task import LiveDecoder, decoded_state  # noqa: E402
-from dual_mi_classifier import BOTH, LEFT, REST, RIGHT, DualMIClassifier, WindowDataset, compute_arrow_fills  # noqa: E402
+from dual_mi_classifier import BOTH, CLASS_NAMES, DESIGNS, LEFT, REST, RIGHT, DualMIClassifier, WindowDataset, compute_arrow_fills  # noqa: E402
 from lsl_utils import connect_eeg_stream  # noqa: E402
-from mental_command_worker import resolve_channel_order  # noqa: E402
+from mental_command_worker import canonicalize_channel_name, resolve_channel_order  # noqa: E402
 
 
 # ----------------------------------------------------------------
@@ -80,10 +88,17 @@ class FeedbackConfig:
     mi_start_s: float = 1.0
     mi_stop_s: float = 3.0
 
-    # Feedback starts once every class has this many trials, then the model
-    # retrains after every retrain_every new trials.
+    # Decoder design: "side_specific" (default), "activity_side" (best for
+    # Andy) or "detectors" (original). See bci/dual_mi_classifier.py.
+    decoder_design: str = "side_specific"
+
+    # Without a starting model, feedback starts once every class has this many
+    # trials. The model retrains after every retrain_every new trials.
     min_trials_per_class: int = 3
     retrain_every: int = 4
+
+    # Weight of earlier sessions' windows relative to this session's when retraining.
+    base_data_weight: float = 0.5
 
     # A detector counts as active above this probability (0.5 = chance).
     activation_threshold: float = 0.5
@@ -218,7 +233,7 @@ _FB_VERTS_UP = [(-y, x) for x, y in _FB_VERTS_RIGHT]
 
 
 def run_task(session_name: str, port: str, task_cfg: TaskConfig, stim_cfg: StimConfig, ser_cfg: SerialConfig,
-             fb_cfg: FeedbackConfig, model_path: str | None = None) -> None:
+             fb_cfg: FeedbackConfig, model_path: str | None = None, base_data_path: str | None = None) -> None:
     left = int(stim_cfg.left_code)
     right = int(stim_cfg.right_code)
     rest = int(stim_cfg.rest_code)
@@ -249,23 +264,52 @@ def run_task(session_name: str, port: str, task_cfg: TaskConfig, stim_cfg: StimC
     stream.pick(ch_names)
     sfreq = float(stream.info["sfreq"])
     decoder = LiveDecoder(stream, len(ch_names), sfreq, eeg_cfg, dec_cfg)
-    dataset = WindowDataset.empty(len(ch_names), decoder.window_n, ch_names)
+    dataset = WindowDataset.empty(len(ch_names), decoder.window_n, ch_names)  # this session
+    base = WindowDataset.empty(len(ch_names), decoder.window_n, ch_names)     # earlier sessions
 
-    clf = DualMIClassifier.load(model_path) if model_path else DualMIClassifier(C=dec_cfg.logreg_C)
-    if model_path and clf.channel_names and list(clf.channel_names) != list(ch_names):
-        stream.disconnect()
-        raise RuntimeError(f"Model channels {clf.channel_names} do not match the stream {ch_names}")
+    def same_channels(a: list[str], b: list[str]) -> bool:
+        return [canonicalize_channel_name(c) for c in a] == [canonicalize_channel_name(c) for c in b]
+
+    clf = DualMIClassifier(C=dec_cfg.logreg_C, design=fb_cfg.decoder_design)
+    if model_path:
+        loaded = DualMIClassifier.load(model_path)
+        if loaded.channel_names and not same_channels(loaded.channel_names, ch_names):
+            stream.disconnect()
+            raise RuntimeError(f"Model channels {loaded.channel_names} do not match the stream {ch_names}")
+        if base_data_path is None:
+            stem = model_path[:-len("_model.pkl")] if model_path.endswith("_model.pkl") else model_path.rsplit(".", 1)[0]
+            base_data_path = f"{stem}_windows.npz" if Path(f"{stem}_windows.npz").exists() else None
+        if base_data_path:
+            base = WindowDataset.load(base_data_path)
+            if not same_channels(base.channel_names, ch_names) or base.X.shape[2] != decoder.window_n:
+                stream.disconnect()
+                raise RuntimeError(f"{base_data_path} does not match this stream (channels or window length)")
+            base.channel_names = list(ch_names)
+            base.weights = np.full(len(base), fb_cfg.base_data_weight)
+            print(f"[MODEL] Earlier data: {base_data_path}, trials "
+                  f"{ {CLASS_NAMES[k]: v for k, v in base.trial_counts().items()} }")
+        if loaded._design() == fb_cfg.decoder_design or not DualMIClassifier.can_fit(base):
+            clf = loaded
+            if loaded._design() != fb_cfg.decoder_design:
+                print(f"[MODEL] Note: the model uses design {loaded._design()!r}; without its windows file it "
+                      f"cannot be retrained as {fb_cfg.decoder_design!r} until this session has enough trials.")
+        else:
+            clf.fit(base)
+            print(f"[MODEL] Retrained the starting model as {fb_cfg.decoder_design!r}")
+        print(f"[MODEL] Starting from {model_path} (design {clf._design()!r})")
 
     # Session logs
     log_dir = Path(fb_cfg.log_dir)
     log_dir.mkdir(parents=True, exist_ok=True)
-    base = log_dir / session_name
-    with open(f"{base}_config.json", "w", encoding="utf-8") as fh:
+    base_path = log_dir / session_name
+    with open(f"{base_path}_config.json", "w", encoding="utf-8") as fh:
         json.dump({"session_name": session_name, "created_at": datetime.now().isoformat(timespec="seconds"),
                    "task_config": asdict(task_cfg), "feedback_config": asdict(fb_cfg),
                    "trigger_codes": asdict(stim_cfg), "eeg_channels": ch_names, "sfreq": sfreq,
-                   "start_model": model_path}, fh, indent=2)
-    trials_fh = open(f"{base}_trials.csv", "w", newline="")
+                   "start_model": model_path, "earlier_data": base_data_path,
+                   "earlier_trials": {CLASS_NAMES[k]: v for k, v in base.trial_counts().items()},
+                   "decoder_design": fb_cfg.decoder_design}, fh, indent=2)
+    trials_fh = open(f"{base_path}_trials.csv", "w", newline="")
     trials_log = csv.writer(trials_fh)
     trials_log.writerow(["trial", "condition", "trigger_code", "onset_lsl_s", "feedback_on", "model_version",
                          "mean_p_left", "mean_p_right", "decoded", "hit", "n_windows_saved"])
@@ -368,8 +412,11 @@ def run_task(session_name: str, port: str, task_cfg: TaskConfig, stim_cfg: StimC
         cue_text.text = "Updating model..."
         draw_scene()
         win.flip()
-        clf.fit(dataset)
-        print(f"[MODEL] v{clf.version} trained on {len(dataset)} windows")
+        data = base.append(dataset) if len(base) else dataset
+        if not DualMIClassifier.can_fit(data):
+            return
+        clf.fit(data)
+        print(f"[MODEL] v{clf.version} trained on {len(data)} windows ({len(dataset)} from this session)")
 
     scheduler = BalancedBlockScheduler(
         block_size=max(2, task_cfg.max_trials_before_break),
@@ -477,8 +524,9 @@ def run_task(session_name: str, port: str, task_cfg: TaskConfig, stim_cfg: StimC
             trials_fh.flush()
             trials_done = cal_idx + 1
 
-            # Retrain once every class has enough trials, then every few trials
-            enough = all(n >= fb_cfg.min_trials_per_class for n in trials_per_class.values())
+            # Retrain every few trials. Without earlier data, wait until every
+            # class has enough trials in this session.
+            enough = len(base) > 0 or all(n >= fb_cfg.min_trials_per_class for n in trials_per_class.values())
             if enough and (not clf.is_fitted or since_retrain >= fb_cfg.retrain_every):
                 retrain()
                 since_retrain = 0
@@ -508,9 +556,10 @@ def run_task(session_name: str, port: str, task_cfg: TaskConfig, stim_cfg: StimC
 
     finally:
         if clf.is_fitted:
-            clf.save(f"{base}_model.pkl")
-        if len(dataset):
-            dataset.save(f"{base}_windows.npz")
+            clf.save(f"{base_path}_model.pkl")
+        all_data = base.append(dataset) if len(base) else dataset
+        if len(all_data):
+            all_data.save(f"{base_path}_windows.npz")
         trials_fh.close()
         trig.close()
         try:
@@ -530,7 +579,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--participant", type=str, default=None, help="Participant name for session label")
     parser.add_argument("--port", type=str, default=None, help="Serial port override (e.g., COM6 or /dev/ttyUSB0)")
     parser.add_argument("--trials", type=int, default=None, help="Override number of calibration trials")
-    parser.add_argument("--model", type=str, default=None, help="Saved model (.pkl) to give feedback from the first trial")
+    parser.add_argument("--model", type=str, default=None,
+                        help="Starting model (.pkl) from build_start_model.py or an earlier session")
+    parser.add_argument("--base-data", type=str, default=None,
+                        help="Earlier windows (.npz) to keep in every retrain (default: the _windows.npz next to --model)")
+    parser.add_argument("--design", choices=DESIGNS, default=None,
+                        help="Decoder design (default: side_specific; activity_side works best for Andy)")
     parser.add_argument("--fullscreen", action="store_true", help="Run fullscreen")
     return parser.parse_args()
 
@@ -544,7 +598,7 @@ def main() -> None:
         fullscreen=bool(args.fullscreen),
     )
     ser_cfg = SerialConfig()
-    fb_cfg = FeedbackConfig()
+    fb_cfg = FeedbackConfig() if args.design is None else FeedbackConfig(decoder_design=args.design)
 
     participant = sanitize_participant_name(args.participant or input("Enter participant name: "))
     if not participant:
@@ -561,6 +615,7 @@ def main() -> None:
         ser_cfg=ser_cfg,
         fb_cfg=fb_cfg,
         model_path=args.model,
+        base_data_path=args.base_data,
     )
 
 

@@ -16,6 +16,15 @@ class LSLConfig:
     # Trigger / stim channel as it appears in the LSL stream info
     event_channels: str = "TRG"  # Wearable Sensing DSI devices often expose Trigger/TRG
 
+    # If no LSL stream is found, read DSI-Streamer's TCP/IP output instead
+    # (DSI-Streamer: TCP IP tab -> Activate TCP/IP Socket -> Start). See
+    # bci/dsi_tcp_bridge.py. DSI-Streamer can keep recording at the same time.
+    dsi_tcp_fallback: bool = True
+    dsi_tcp_host: str = "127.0.0.1"
+    dsi_tcp_port: int = 8844
+    # Re-reference to the LE channel, the same as the offline EDF pipeline.
+    dsi_tcp_reref_le: bool = True
+
 
 @dataclass(frozen=True)
 class StimConfig:
@@ -637,6 +646,8 @@ class DualArrowTaskConfig:
     # Keep only MI recordings in data_dir (no ErrP or SSVEP files), and use
     # calirate_on_participant below to pick one person's sessions.
     edf_glob: str = "*.edf"
+    # Skip EDFs whose file name contains any of these (e.g. online control sessions).
+    edf_exclude: tuple[str, ...] = ("MIcontrol",)
     # Only EDF paths containing this text are used (same name the other tasks use).
     calirate_on_participant: str = ""
     offline_eeg_scale_to_match_live: float = 1e6
@@ -665,9 +676,13 @@ class DualArrowTaskConfig:
     filter_context_s: float = 2.0
     live_update_interval_s: float = 0.10
     logreg_C: float = 1.0
-    # If True, the other side's MI windows are also used as "not active" for
-    # each detector. Keep False so imagining both arms drives both detectors
-    # (that is what fills the forward arrow).
+    # Decoder design (see bci/dual_mi_classifier.py):
+    #   "side_specific"  LEFT vs (REST + RIGHT), RIGHT vs (REST + LEFT); best
+    #                    compromise across participants so far (default)
+    #   "activity_side"  imagining vs REST, then which side; best for Andy
+    #   "detectors"      LEFT vs REST, RIGHT vs REST (original)
+    decoder_design: str = "side_specific"
+    # Older setting, only used when decoder_design is empty.
     include_other_side_as_negative: bool = False
 
     # ---- Live calibration (start of every session) ----
