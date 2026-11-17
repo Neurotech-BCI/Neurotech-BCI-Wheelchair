@@ -624,3 +624,79 @@ class BCIOrchestratorConfig:
     shared_config_overrides: dict[str, dict[str, object]] = field(default_factory=dict)
     task_config_overrides: dict[str, dict[str, dict[str, object]]] = field(default_factory=dict)
     task_sequence: tuple[OrchestratedTaskSpec, ...] = field(default_factory=tuple)
+
+
+@dataclass(frozen=True)
+class DualArrowTaskConfig:
+    """Settings for dual_arrow_task: two binary MI-vs-rest detectors driving
+    left / right / forward arrow fills, with live calibration at the start."""
+
+    # ---- Optional offline pre-training from existing cued LEFT/RIGHT EDFs ----
+    # Leave data_dir empty to calibrate from scratch in the live session.
+    data_dir: str = ""
+    # Keep only MI recordings in data_dir (no ErrP or SSVEP files), and use
+    # calirate_on_participant below to pick one person's sessions.
+    edf_glob: str = "*.edf"
+    # Only EDF paths containing this text are used (same name the other tasks use).
+    calirate_on_participant: str = ""
+    offline_eeg_scale_to_match_live: float = 1e6
+    live_eeg_units: str = "uV"
+    # Part of each offline execute epoch used as MI, in seconds after the
+    # trigger. The MI is taken from 1 to 3 s (the first second is reaction time).
+    offline_mi_start_s: float = 1.0
+    offline_mi_stop_s: float = 3.0
+    # Trigger codes for the REST and BOTH HANDS trials in psychopy/mi_task.py.
+    # (LEFT/RIGHT use StimConfig.left_code / right_code.)
+    offline_rest_code: int = 3
+    offline_both_code: int = 4
+    # For older recordings with no REST trials, REST windows are instead cut
+    # from the fixation ITI before each trial.
+    # psychopy/mi_task.py runs ITI 3s -> prepare 3s -> execute (trigger), so the
+    # ITI spans trigger-6s to trigger-3s. The first 0.5s is skipped to avoid
+    # carry-over from the previous trial.
+    offline_rest_start_s: float = -5.5
+    offline_rest_stop_s: float = -3.0
+    # Weight of offline windows relative to this session's calibration windows.
+    offline_sample_weight: float = 0.5
+
+    # ---- Decoder ----
+    window_s: float = 1.0
+    window_step_s: float = 0.5
+    filter_context_s: float = 2.0
+    live_update_interval_s: float = 0.10
+    logreg_C: float = 1.0
+    # If True, the other side's MI windows are also used as "not active" for
+    # each detector. Keep False so imagining both arms drives both detectors
+    # (that is what fills the forward arrow).
+    include_other_side_as_negative: bool = False
+
+    # ---- Live calibration (start of every session) ----
+    n_calibration_left: int = 50
+    n_calibration_right: int = 50
+    n_calibration_rest: int = 50
+    # BOTH = imagine both arms. Without these the detectors never see bilateral
+    # imagery and the forward arrow will rarely fill. Set 0 to skip.
+    n_calibration_both: int = 25
+    calibration_iti_s: float = 2.0
+    calibration_cue_s: float = 1.5
+    calibration_execute_s: float = 3.0
+    # Ignore the start of each execute period (reaction time) when saving data,
+    # so only the 1 to 3 s MI window is used for training.
+    calibration_trim_start_s: float = 1.0
+    # Live feedback turns on once every class has at least this many trials.
+    min_trials_per_class_for_feedback: int = 5
+    # Refit both detectors after this many new calibration trials.
+    retrain_every_n_trials: int = 6
+    # Mandatory pause (SPACE to continue) after this many trials.
+    break_every_n_trials: int = 30
+
+    # ---- Arrow feedback ----
+    # Detector probability at which an arrow starts to fill (0.5 = chance).
+    activation_threshold: float = 0.5
+    # Exponential smoothing of probabilities per update (1.0 = no smoothing).
+    ema_alpha: float = 0.25
+    # Free-run practice after calibration; None = until ESC.
+    free_run_duration_s: float | None = None
+
+    fullscreen: bool = False
+    win_size: tuple[int, int] = (1280, 760)
