@@ -10,14 +10,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 import argparse
 import random
 import time
+import traceback
 
 import serial
 import serial.tools.list_ports
 from psychopy import core, event, visual
 
+from dsi_recorder import DSIRecorder 
 
 # ----------------------------------------------------------------
 # Embedded config
@@ -145,7 +148,7 @@ _ARROW_VERTS_LEFT = [(-x, y) for x, y in _ARROW_VERTS_RIGHT]
 _ARROW_VERTS_UP = [(y + 0.05, x) for x, y in _ARROW_VERTS_LEFT]
 
 
-def run_task(session_name: str, port: str, task_cfg: TaskConfig, stim_cfg: StimConfig, ser_cfg: SerialConfig) -> None:
+def run_task(session_name: str, port: str, task_cfg: TaskConfig, stim_cfg: StimConfig, ser_cfg: SerialConfig, recorder: DSIRecorder | None = None) -> None:
     left = int(stim_cfg.left_code)
     right = int(stim_cfg.right_code)
     rest = int(stim_cfg.rest_code)
@@ -159,7 +162,7 @@ def run_task(session_name: str, port: str, task_cfg: TaskConfig, stim_cfg: StimC
         if int(code) == rest:
             return "REST"
         return "BOTH HANDS"
-        
+    
     trig = TriggerPort(port=port, baudrate=ser_cfg.baudrate, pulse_width_s=ser_cfg.pulse_width_s)
     trig.open()
 
@@ -299,13 +302,14 @@ def run_task(session_name: str, port: str, task_cfg: TaskConfig, stim_cfg: StimC
             win.close()
         except Exception:
             pass
-        core.quit()
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Offline MI calibration trigger task")
     parser.add_argument("--participant", type=str, default=None, help="Participant name for session label")
     parser.add_argument("--port", type=str, default=None, help="Serial port override (e.g., COM6 or /dev/ttyUSB0)")
+    parser.add_argument("--headset-port", type=str, default= 'COM5', help="DSI headset COM port (default: COM5)")
+    parser.add_argument("--dsi-dir", type=str, default=r'C:\Users\Owner\Desktop\BCI\Neurotech-BCI-Wheelchair\Dsi_api', help="Path to DSI API folder (defaults to the Drive mi_task folder)")
     parser.add_argument("--trials", type=int, default=None, help="Override number of calibration trials")
     parser.add_argument("--fullscreen", action="store_true", help="Run fullscreen")
     return parser.parse_args()
@@ -327,14 +331,31 @@ def main() -> None:
 
     session_name = build_session_prefix(participant)
     port = args.port or find_port_by_vid_pid(ser_cfg.vid, ser_cfg.pid)
+    edf_path = Path(r"G:\My Drive\Neurotech@USC OFFICIAL\Data\Fall 2026\BCI Project\mi_task") / f"{session_name}.edf"
 
-    run_task(
-        session_name=session_name,
-        port=port,
-        task_cfg=task_cfg,
-        stim_cfg=stim_cfg,
-        ser_cfg=ser_cfg,
-    )
+    #DSIRecorder is not used in this offline calibration task, but we import it for reference.
+    recorder = DSIRecorder(args.headset_port,args.dsi_dir)
+    recorder.connect()
+    try:
+        recorder.start()
+        run_task(
+            session_name=session_name,
+            port=port,
+            task_cfg=task_cfg,
+            stim_cfg=stim_cfg,
+            ser_cfg=ser_cfg,
+            recorder=recorder
+        )
+    except Exception:
+        traceback.print_exc()
+    finally:
+        recorder.stop()
+        try:
+            recorder.save_edf(edf_path, patient_code=participant)
+            print(f"[SESSION] Saved EDF+ to {edf_path}")
+        except Exception as e:
+            print(f"[SESSION] Error saving EDF+: {e}")
+        core.quit()
 
 
 if __name__ == "__main__":

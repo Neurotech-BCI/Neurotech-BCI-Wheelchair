@@ -1,0 +1,52 @@
+{
+  "session_name": "11_17_26_test_feedback_offline_cal",
+  "created_at": "2026-11-17T16:10:32",
+  "task_config": {
+    "n_calibration_trials": 80,
+    "max_trials_before_break": 20,
+    "prep_duration_s": 3.0,
+    "execution_duration_s": 3.0,
+    "iti_duration_s": 3.0,
+    "fullscreen": false,
+    "win_size": [
+      1200,
+      700
+    ]
+  },
+  "feedback_config": {
+    "mi_start_s": 1.0,
+    "mi_stop_s": 3.0,
+    "decoder_design": "side_specific",
+    "min_trials_per_class": 3,
+    "retrain_every": 4,
+    "base_data_weight": 0.5,
+    "activation_threshold": 0.5,
+    "ema_alpha": 0.25,
+    "log_dir": "logs"
+  },
+  "trigger_codes": {
+    "left_code": 1,
+    "right_code": 2,
+    "rest_code": 3,
+    "both_hands_code": 4
+  },
+  "eeg_channels": [
+    "Pz",
+    "F4",
+    "C4",
+    "P4",
+    "P3",
+    "C3",
+    "F3"
+  ],
+  "sfreq": 300.0,
+  "start_model": null,
+  "earlier_data": null,
+  "earlier_trials": {
+    "LEFT": 0,
+    "RIGHT": 0,
+    "BOTH": 0,
+    "REST": 0
+  },
+  "decoder_design": "side_specific"
+}

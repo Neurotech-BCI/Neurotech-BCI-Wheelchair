@@ -1,3 +1,5 @@
 .vscode/
 *.log
 bci/__pycache__/*
+/Dsi_api
+psychopy/__pycache__/*
